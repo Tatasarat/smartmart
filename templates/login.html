@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | Lumina</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen p-4">
+
+<div class="max-w-4xl w-full bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col md:flex-row animate__animated animate__zoomIn">
+
+<!-- LEFT -->
+
+<div class="hidden md:flex md:w-1/2 bg-indigo-600 p-12 text-white flex-col justify-between">
+
+<div>
+<h2 class="text-4xl font-bold mb-4">Welcome Back.</h2>
+<p>Log in to access your store and orders.</p>
+</div>
+
+<p class="text-sm opacity-70">© 2026 Lumina</p>
+
+</div>
+
+
+<!-- RIGHT -->
+
+<div class="w-full md:w-1/2 p-8 md:p-12">
+
+<h1 class="text-2xl font-black text-indigo-600 mb-2">LUMINA</h1>
+<p class="text-gray-500 mb-6">Sign in to continue</p>
+
+<form id="loginForm" class="space-y-4">
+
+<input id="email" type="email" placeholder="Email"
+class="w-full p-3 border rounded">
+
+<input id="password" type="password" placeholder="Password"
+class="w-full p-3 border rounded">
+
+<button class="w-full bg-indigo-600 text-white py-3 rounded">
+Sign In
+</button>
+
+<p id="error" class="text-red-500 text-sm text-center"></p>
+
+</form>
+
+<!-- GOOGLE LOGIN -->
+
+<button id="googleLogin"
+class="w-full border mt-4 py-3 rounded flex justify-center items-center space-x-2">
+
+<img src="https://www.svgrepo.com/show/355037/google.svg" class="w-5">
+
+<span>Continue with Google</span>
+
+</button>
+
+<p class="text-center mt-6 text-sm">
+Don't have an account?
+<a href="/signup" class="text-indigo-600 font-bold">Create one</a>
+</p>
+
+</div>
+
+</div>
+
+
+<!-- ROLE POPUP -->
+
+<div id="rolePopup"
+class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+
+<div class="bg-white p-6 rounded-xl text-center w-80">
+
+<h2 class="text-xl font-bold mb-4">Select Your Role</h2>
+
+<button onclick="selectRole('user')"
+class="w-full bg-indigo-600 text-white py-2 mb-3 rounded">
+User
+</button>
+
+<button onclick="selectRole('seller')"
+class="w-full bg-green-600 text-white py-2 rounded">
+Seller
+</button>
+
+</div>
+
+</div>
+
+
+<!-- FIREBASE SCRIPT -->
+
+<script type="module">
+
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+getAuth,
+signInWithEmailAndPassword,
+GoogleAuthProvider,
+signInWithPopup
+} from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+getFirestore,
+doc,
+getDoc,
+setDoc
+} from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCyuyRD3cyLoSfO9NNpye-fD7NT5b6sFU0",
+  authDomain: "smartmart-5347b.firebaseapp.com",
+  projectId: "smartmart-5347b",
+  storageBucket: "smartmart-5347b.firebasestorage.app",
+  messagingSenderId: "628126961866",
+  appId: "1:628126961866:web:ff68ce82d43d3ffe1d2433",
+  measurementId: "G-7D30X3DG49"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const provider = new GoogleAuthProvider();
+
+let tempUser = null;
+
+
+/* EMAIL LOGIN */
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+
+e.preventDefault();
+
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+const error = document.getElementById("error");
+
+try {
+
+const userCredential = await signInWithEmailAndPassword(auth,email,password);
+
+redirectUser(userCredential.user.uid);
+
+} catch (err) {
+
+error.innerText = err.message;
+
+}
+
+});
+
+
+/* GOOGLE LOGIN */
+
+document.getElementById("googleLogin").addEventListener("click", async () => {
+
+try {
+
+const result = await signInWithPopup(auth, provider);
+
+const user = result.user;
+
+const userRef = doc(db, "users", user.uid);
+const userSnap = await getDoc(userRef);
+
+if (!userSnap.exists()) {
+
+/* NEW USER → SHOW ROLE POPUP */
+
+tempUser = user;
+document.getElementById("rolePopup").classList.remove("hidden");
+
+} else {
+
+/* EXISTING USER */
+
+redirectUser(user.uid);
+
+}
+
+} catch (error) {
+
+alert(error.message);
+
+}
+
+});
+
+
+/* ROLE SELECT */
+
+window.selectRole = async (role) => {
+
+if (!tempUser) return;
+
+await setDoc(doc(db, "users", tempUser.uid), {
+
+username: tempUser.displayName,
+email: tempUser.email,
+role: role,
+uid: tempUser.uid,
+createdAt: new Date()
+
+});
+
+document.getElementById("rolePopup").classList.add("hidden");
+
+redirectUser(tempUser.uid);
+
+};
+
+
+/* REDIRECT BASED ON ROLE */
+
+async function redirectUser(uid){
+
+const userRef = doc(db, "users", uid);
+const userSnap = await getDoc(userRef);
+
+if (userSnap.exists()) {
+
+const role = userSnap.data().role;
+
+if (role === "seller") {
+
+window.location.href = "/seller";
+
+} else {
+
+window.location.href = "/user";
+
+}
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

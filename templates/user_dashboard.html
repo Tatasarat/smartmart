@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartMart</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+
+<!-- NAVBAR -->
+<nav class="bg-black text-white p-4 flex justify-between items-center">
+<h1 class="text-2xl font-bold text-yellow-400">Lumina AI</h1>
+
+<div class="space-x-4">
+<button onclick="loadProducts()">🔄 Refresh</button>
+<button onclick="openCart()">🛒 Cart</button>
+</div>
+</nav>
+
+<!-- HERO -->
+<div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 text-center">
+<h1 class="text-3xl font-bold">AI Smart Shopping</h1>
+<p>Analyze products with AI before buying</p>
+</div>
+
+<!-- PRODUCTS -->
+<div class="max-w-7xl mx-auto p-6">
+<div id="products" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay"
+class="fixed inset-0 bg-black bg-opacity-50 hidden"
+onclick="closeCart(); closeAI();"></div>
+
+<!-- CART PANEL -->
+<div id="cartPanel"
+class="fixed top-0 right-0 w-80 h-full bg-white shadow-lg p-4 transform translate-x-full transition duration-300">
+
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-xl font-bold">Your Cart</h2>
+<button onclick="closeCart()" class="text-red-500 text-xl">✖</button>
+</div>
+
+<div id="cartItems"></div>
+
+<button onclick="placeOrder()"
+class="bg-indigo-600 text-white w-full py-2 mt-4 rounded">
+Checkout
+</button>
+
+</div>
+
+<!-- AI PANEL -->
+<div id="aiPanel"
+class="fixed right-0 top-0 w-96 h-full bg-white shadow-lg p-5 transform translate-x-full transition duration-300 overflow-y-auto">
+
+<div class="flex justify-between items-center mb-4">
+<h2 class="text-lg font-bold">🤖 AI Assistant</h2>
+<button onclick="closeAI()" class="text-red-500 text-xl">✖</button>
+</div>
+
+<div id="aiContent" class="space-y-4 text-sm"></div>
+
+</div>
+
+<script>
+
+const BASE_URL = "http://127.0.0.1:5000";
+
+let cart = [];
+
+/* LOAD PRODUCTS */
+async function loadProducts(){
+
+const res = await fetch(`${BASE_URL}/products`);
+const data = await res.json();
+
+const container = document.getElementById("products");
+container.innerHTML = "";
+
+if(data.length === 0){
+container.innerHTML = "<p>No products available</p>";
+return;
+}
+
+data.forEach(p => {
+
+container.innerHTML += `
+<div class="bg-white p-4 rounded-xl shadow hover:shadow-lg transition">
+
+<img src="${BASE_URL}/${p.image}" 
+class="h-40 w-full object-cover rounded">
+
+<h3 class="font-semibold mt-2">${p.name}</h3>
+
+<p class="text-indigo-600 font-bold">₹${p.price}</p>
+
+<p class="text-green-600 text-sm">
+AI Trust: ${p.trust_score?.toFixed(1)}%
+</p>
+
+<button onclick="analyzeProduct('${p.image}', ${p.price})"
+class="bg-indigo-600 text-white mt-2 w-full py-2 rounded">
+Analyze
+</button>
+
+<button onclick="addToCart(${p.id})"
+class="bg-yellow-400 mt-2 w-full py-2 rounded">
+Add to Cart
+</button>
+
+</div>
+`;
+});
+
+}
+
+
+/* CART */
+function openCart(){
+document.getElementById("cartPanel").classList.remove("translate-x-full");
+document.getElementById("overlay").classList.remove("hidden");
+loadCart();
+}
+
+function closeCart(){
+document.getElementById("cartPanel").classList.add("translate-x-full");
+document.getElementById("overlay").classList.add("hidden");
+}
+
+function addToCart(id){
+cart.push(id);
+loadCart();
+}
+
+function loadCart(){
+
+const c = document.getElementById("cartItems");
+c.innerHTML = "";
+
+if(cart.length === 0){
+c.innerHTML = "<p class='text-gray-500'>Cart is empty</p>";
+return;
+}
+
+cart.forEach((id,i)=>{
+c.innerHTML += `
+<div class="flex justify-between border-b py-2">
+<span>Product ${id}</span>
+<button onclick="removeCart(${i})" class="text-red-500">✖</button>
+</div>
+`;
+});
+}
+
+function removeCart(i){
+cart.splice(i,1);
+loadCart();
+}
+
+function placeOrder(){
+alert("Order placed!");
+cart = [];
+loadCart();
+closeCart();
+}
+
+
+/* AI PANEL CONTROL */
+function openAI(){
+document.getElementById("aiPanel").classList.remove("translate-x-full");
+document.getElementById("overlay").classList.remove("hidden");
+}
+
+function closeAI(){
+document.getElementById("aiPanel").classList.add("translate-x-full");
+document.getElementById("overlay").classList.add("hidden");
+}
+
+
+/* AI ANALYSIS */
+async function analyzeProduct(image, price){
+
+openAI();
+
+const content = document.getElementById("aiContent");
+
+content.innerHTML = `<p class="text-gray-500">Analyzing product...</p>`;
+
+const res = await fetch(`${BASE_URL}/analyze-product`,{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body: JSON.stringify({image:image, price:price})
+});
+
+const data = await res.json();
+
+/* AI RESPONSE */
+let good = "";
+let bad = "";
+
+if(data.trust > 85){
+good = "This product has high trust and is likely genuine.";
+bad = "No major issues detected.";
+}
+else if(data.trust > 70){
+good = "Product is moderately reliable.";
+bad = "Quality may vary.";
+}
+else{
+good = "Low trust score.";
+bad = "This might be a fake or low-quality product.";
+}
+
+/* RECOMMENDATIONS */
+let recHTML = "";
+
+data.recommendations.forEach(p=>{
+recHTML += `
+<div class="border p-2 rounded">
+<p class="font-semibold">${p.name}</p>
+<p class="text-indigo-600">₹${p.price}</p>
+</div>
+`;
+});
+
+/* DISPLAY */
+content.innerHTML = `
+<div class="bg-gray-100 p-3 rounded">
+<p><b>🧠 Detected:</b> ${data.label}</p>
+<p><b>📊 Trust Score:</b> ${data.trust.toFixed(2)}%</p>
+</div>
+
+<div class="bg-green-100 p-3 rounded">
+<p><b>✅ Good:</b> ${good}</p>
+</div>
+
+<div class="bg-red-100 p-3 rounded">
+<p><b>⚠️ Concern:</b> ${bad}</p>
+</div>
+
+<div>
+<p class="font-bold mb-2">🎯 Recommendations</p>
+${recHTML}
+</div>
+`;
+
+}
+
+
+/* INIT */
+loadProducts();
+
+</script>
+
+</body>
+</html>

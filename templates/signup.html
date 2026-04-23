@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sign Up | Lumina</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-8 rounded-xl shadow w-96">
+
+<h2 class="text-2xl font-bold text-center mb-6">Create Account</h2>
+
+<!-- USERNAME -->
+<input id="username" placeholder="Username"
+class="w-full p-3 border rounded mb-3">
+
+<!-- EMAIL -->
+<input id="email" type="email" placeholder="Email"
+class="w-full p-3 border rounded mb-3">
+
+<!-- PASSWORD -->
+<input id="password" type="password" placeholder="Password"
+class="w-full p-3 border rounded mb-3">
+
+<!-- CONFIRM PASSWORD -->
+<input id="confirmPassword" type="password" placeholder="Confirm Password"
+class="w-full p-3 border rounded mb-3">
+
+<!-- ROLE -->
+<select id="role"
+class="w-full p-3 border rounded mb-3">
+
+<option value="user">User</option>
+<option value="seller">Seller</option>
+
+</select>
+
+<!-- SIGNUP BUTTON -->
+<button id="signupBtn"
+class="w-full bg-indigo-600 text-white py-3 rounded">
+Sign Up
+</button>
+
+<p id="msg" class="text-center text-sm mt-3"></p>
+
+<p class="text-center mt-4 text-sm">
+Already have an account?
+<a href="login.html" class="text-indigo-600 font-bold">Login</a>
+</p>
+
+</div>
+
+
+<script type="module">
+
+import { initializeApp } from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+import {
+getAuth,
+createUserWithEmailAndPassword
+} from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+import {
+getFirestore,
+doc,
+setDoc
+} from
+"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCyuyRD3cyLoSfO9NNpye-fD7NT5b6sFU0",
+  authDomain: "smartmart-5347b.firebaseapp.com",
+  projectId: "smartmart-5347b",
+  storageBucket: "smartmart-5347b.firebasestorage.app",
+  messagingSenderId: "628126961866",
+  appId: "1:628126961866:web:ff68ce82d43d3ffe1d2433",
+  measurementId: "G-7D30X3DG49"
+};
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+
+/* SIGNUP */
+
+document.getElementById("signupBtn").onclick = async () => {
+
+const username = document.getElementById("username").value;
+const email = document.getElementById("email").value;
+const password = document.getElementById("password").value;
+const confirmPassword = document.getElementById("confirmPassword").value;
+const role = document.getElementById("role").value;
+
+const msg = document.getElementById("msg");
+
+
+/* VALIDATION */
+
+if(password !== confirmPassword){
+msg.innerText = "Passwords do not match!";
+return;
+}
+
+if(password.length < 6){
+msg.innerText = "Password must be at least 6 characters";
+return;
+}
+
+
+try {
+
+/* CREATE USER */
+
+const userCredential = await createUserWithEmailAndPassword(
+auth,
+email,
+password
+);
+
+const user = userCredential.user;
+
+
+/* SAVE USER DATA */
+
+await setDoc(doc(db,"users",user.uid),{
+
+username: username,
+email: email,
+role: role,
+uid: user.uid,
+createdAt: new Date()
+
+});
+
+
+msg.innerText = "Account created successfully!";
+
+
+/* REDIRECT */
+
+setTimeout(()=>{
+
+if(role === "seller"){
+window.location.href = "/seller";
+}else{
+window.location.href = "/user";
+}
+
+},1500);
+
+
+} catch (error) {
+
+msg.innerText = error.message;
+
+}
+
+};
+
+</script>
+
+</body>
+</html>
