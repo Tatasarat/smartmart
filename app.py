@@ -1,8 +1,6 @@
 from flask import Flask , render_template , request , redirect , url_for , jsonify
 from flask_cors import CORS
 import os
-
-from utils.cnn import predict_trust
 from utils.recommend import recommend_products
 
 app = Flask(__name__, static_folder="static")
